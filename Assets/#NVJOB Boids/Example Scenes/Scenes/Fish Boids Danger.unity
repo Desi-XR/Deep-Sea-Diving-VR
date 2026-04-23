@@ -3633,13 +3633,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 723f86eb74237a04cb24cb210a1e99b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sensitivity: 3
-  verticalClamp: {x: -85, y: 85}
-  smoothRotation: 10
-  swimSpeed: 20
+  swimSpeed: 10
   camTransform: {fileID: 585125319}
-  zoomLimit: {x: -15, y: 0}
-  smoothZoom: 5
+  requiredGazeTime: 3
+  steadyThreshold: 12
+  turnSmoothness: 1.5
 --- !u!4 &2043210048
 Transform:
   m_ObjectHideFlags: 0
@@ -3669,7 +3667,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   shakePivot: {fileID: 92493645}
-  maxShakeMagnitude: 0.5
+  maxShakeMagnitude: 0.2
   shakeSpeed: 25
 --- !u!1 &2072755139
 GameObject:

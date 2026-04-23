@@ -1,108 +1,133 @@
 ﻿using UnityEngine;
 
-
 [AddComponentMenu("#NVJOB/Tools/DeepSeaController_FixedPivot")]
 public class TDControl : MonoBehaviour
 {
-    [Header("Vision Settings")]
-    public float sensitivity = 2.0f;
-    public Vector2 verticalClamp = new Vector2(-85, 85);
-    public float smoothRotation = 10f;
-
-
-    [Header("Movement Settings")]
+    [Header("VR Movement Settings")]
     public float swimSpeed = 7f;
+    public Transform camTransform; // Drag Camera 0 here
 
+    [Header("Engine Toggle (Stop / Go)")]
+    [Tooltip("Press this key on PC to stop/start the engine.")]
+    public KeyCode pcToggleKey = KeyCode.Space;
+    [Tooltip("Press this button in VR to stop/start. JoystickButton0 is usually the 'A' button on Meta Quest.")]
+    public KeyCode vrToggleKey = KeyCode.JoystickButton0;
+    [Tooltip("How smoothly the submarine brakes and accelerates. Higher = faster stop.")]
+    public float acceleration = 3.0f;
 
-    [Header("Camera & Zoom")]
-    public Transform camTransform;
-    public Vector2 zoomLimit = new Vector2(-15, 0); // Keep near 0 to avoid revolving
-    public float smoothZoom = 5f;
+    [Header("Gaze Steering (3-Second Rule)")]
+    public float requiredGazeTime = 3.0f;
+    public float steadyThreshold = 12f;
+    public float turnSmoothness = 1.5f;
 
+    [Header("Depth Limits (Sand Only)")]
+    [Tooltip("Keeps you above the Y=-34 Sand")]
+    public float minDepthY = -32f; 
 
-    private Transform tr;
+    [Header("PC Testing Tools")]
+    public bool enableMouseLook = true;
+    public float mouseSensitivity = 2.0f;
+    public Vector2 verticalClamp = new Vector2(-85, 85);
+
+    private Vector3 currentMoveDirection;
+    private Vector3 trackedGazeDirection;
+    private float gazeTimer = 0f;
+    
+    // Engine State Variables
+    private bool isEngineOn = true;
+    private float currentSpeed;
+
+    // PC Testing Variables
     private float yaw, pitch;
-    private float targetZoom, currentZoom, zoomVel;
 
-
-    void Awake()
+    void Start()
     {
-        tr = transform;
-
-
-        // Initialize angles
-        Vector3 rot = tr.eulerAngles;
-        yaw = rot.y;
-
+        // Start at full speed
+        currentSpeed = swimSpeed;
 
         if (camTransform != null)
         {
-            pitch = camTransform.localEulerAngles.x;
-            // CRITICAL: Set camera local position to 0 to stop revolving
-            camTransform.localPosition = Vector3.zero;
+            currentMoveDirection = camTransform.forward;
+            trackedGazeDirection = camTransform.forward;
+        }
+        else
+        {
+            currentMoveDirection = transform.forward;
+            trackedGazeDirection = transform.forward;
         }
 
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
-
-
-    void LateUpdate()
-    {
-        // 1. SPLIT ROTATION (Prevents Revolving)
-        yaw += Input.GetAxis("Mouse X") * sensitivity;
-        pitch -= Input.GetAxis("Mouse Y") * sensitivity;
-        pitch = Mathf.Clamp(pitch, verticalClamp.x, verticalClamp.y);
-
-
-        // Rotate Rig horizontally (Yaw)
-        tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.Euler(0, yaw, 0), Time.deltaTime * smoothRotation);
-
-
-        // Rotate Camera vertically (Pitch)
-        if (camTransform != null)
+        if (enableMouseLook)
         {
-            camTransform.localRotation = Quaternion.Slerp(camTransform.localRotation, Quaternion.Euler(pitch, 0, 0), Time.deltaTime * smoothRotation);
-        }
-
-
-        // 2. 3D MOVEMENT (Moves where you LOOK)
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-
-
-        // We use camTransform.forward so if you look down and press W, you go DOWN.
-        Vector3 moveDir = (camTransform.forward * v) + (tr.right * h);
-        tr.position += moveDir * swimSpeed * Time.deltaTime;
-
-
-        // 3. ZOOM (Strictly Z-axis offset)
-        HandleZoom();
-
-
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            
+            Vector3 rot = transform.eulerAngles;
+            yaw = rot.y;
+            if (camTransform != null) pitch = camTransform.localEulerAngles.x;
         }
     }
 
-
-    void HandleZoom()
+    void Update()
     {
         if (camTransform == null) return;
 
+        // --- 1. ENGINE TOGGLE LOGIC ---
+        // Listen for the PC Spacebar OR the VR 'A' Button OR the default VR Trigger ("Fire1")
+        if (Input.GetKeyDown(pcToggleKey) || Input.GetKeyDown(vrToggleKey) || Input.GetButtonDown("Fire1"))
+        {
+            isEngineOn = !isEngineOn; // Flip the switch!
+        }
 
-        targetZoom += Input.mouseScrollDelta.y;
-        targetZoom = Mathf.Clamp(targetZoom, zoomLimit.x, zoomLimit.y);
-        currentZoom = Mathf.SmoothDamp(currentZoom, targetZoom, ref zoomVel, 1f / smoothZoom);
+        // Smoothly calculate the target speed (either full speed or zero)
+        float targetSpeed = isEngineOn ? swimSpeed : 0f;
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * acceleration);
 
 
-        // Offset the camera slightly back for zoom, but keep X and Y at 0
-        camTransform.localPosition = new Vector3(0, 0, currentZoom);
+        // --- 2. PC MOUSE TESTING OVERRIDE ---
+        if (enableMouseLook)
+        {
+            yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
+            pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
+            pitch = Mathf.Clamp(pitch, verticalClamp.x, verticalClamp.y);
+
+            transform.rotation = Quaternion.Euler(0, yaw, 0);
+            camTransform.localRotation = Quaternion.Euler(pitch, 0, 0);
+            
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+        }
+
+        // --- 3. THE VR GAZE LOGIC ---
+        float angleChange = Vector3.Angle(camTransform.forward, trackedGazeDirection);
+
+        if (angleChange < steadyThreshold)
+        {
+            gazeTimer += Time.deltaTime;
+
+            if (gazeTimer >= requiredGazeTime)
+            {
+                currentMoveDirection = Vector3.Slerp(currentMoveDirection, trackedGazeDirection, Time.deltaTime * turnSmoothness);
+            }
+        }
+        else
+        {
+            trackedGazeDirection = camTransform.forward;
+            gazeTimer = 0f;
+        }
+
+        // --- 4. APPLY MOVEMENT ---
+        // Now we use 'currentSpeed' instead of 'swimSpeed' so the brakes work!
+        transform.position += currentMoveDirection.normalized * currentSpeed * Time.deltaTime;
+
+        // --- 5. APPLY DEPTH LIMIT (THE FLOOR CLAMP) ---
+        Vector3 clampedPos = transform.position;
+        if (clampedPos.y < minDepthY) 
+        {
+            clampedPos.y = minDepthY;
+        }
+        transform.position = clampedPos;
     }
 }
-
-
-
