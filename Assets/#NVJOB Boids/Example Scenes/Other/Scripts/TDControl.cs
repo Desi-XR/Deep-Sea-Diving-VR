@@ -15,14 +15,14 @@ public class TDControl : MonoBehaviour
     [Tooltip("How smoothly the submarine brakes and accelerates. Higher = faster stop.")]
     public float acceleration = 3.0f;
 
-    [Header("Gaze Steering (3-Second Rule)")]
-    public float requiredGazeTime = 3.0f;
+    [Header("Gaze Steering (1.5-Second Rule)")]
+    public float requiredGazeTime = 1.5f;
     public float steadyThreshold = 12f;
     public float turnSmoothness = 1.5f;
 
     [Header("Depth Limits (Sand Only)")]
-    [Tooltip("Keeps you above the Y=-34 Sand")]
-    public float minDepthY = -32f; 
+    [Tooltip("Keeps you above the Y=60 Sand")]
+    public float minDepthY = 60f; 
 
     [Header("PC Testing Tools")]
     public bool enableMouseLook = true;
