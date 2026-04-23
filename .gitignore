@@ -1,0 +1,39 @@
+# Unity folders to ignore
+Library/
+Temp/
+Logs/
+Build/
+UserSettings/
+
+# OS files
+*.log
+*.tmp
+*.user
+*.pid
+*.booproj
+*.svd
+*.pdb
+
+# Visual Studio / Solution files
+.vs/
+*.csproj
+*.slnx
+*.vsconfig
+*.sln
+*.userprefs
+
+# --- Unity Specific ---
+[Oo]bj/
+[Bb]uilds/
+MemoryCaptures/
+
+# --- Assets ---
+# If you use the Asset Store, sometimes it creates these:
+*.unitypackage
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- Crashlytics/Analysis ---
+sysinfo.txt
